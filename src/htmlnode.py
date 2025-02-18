@@ -21,7 +21,7 @@ class HTMLNode:
         return str(self)
 
 class LeafNode(HTMLNode):
-    def __init__(self, tag, value, props):
+    def __init__(self, tag, value, props=None):
         super().__init__(tag, value, None, props)
 
     def to_html(self):
@@ -35,5 +35,25 @@ class LeafNode(HTMLNode):
        if len(props) > 0:
            output += " " + props
        output += ">" + self.value + "</" + self.tag + ">"
+       return output
+
+class ParentNode(HTMLNode):
+    def __init__(self, tag, children, props=None):
+        super().__init__(tag, None, children, props)
+
+    def to_html(self):
+       if self.children == None:
+           raise ValueError("The `children` property was set to None")
+       if self.tag == None:
+           raise ValueError("The `tag` property was set to None")
+
+       output = "<" + self.tag
+       props = self.props_to_html()
+       if len(props) > 0:
+           output += " " + props
+       output += ">" 
+       for child in self.children:
+           output += child.to_html()
+       output += "</" + self.tag + ">"
        return output
 
