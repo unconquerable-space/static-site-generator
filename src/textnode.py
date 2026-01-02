@@ -1,11 +1,13 @@
 from enum import Enum
+from htmlnode import LeafNode
 
 class TextType(Enum):
-    NORMAL = "Normal"
+    TEXT = "Text"
     BOLD = "Bold"
     ITALIC = "Italic"
-    LINKS = "Links"
-    IMAGES = "Images"
+    CODE = "Code"
+    LINK = "Link"
+    IMAGE = "Image"
 
 class TextNode:
     def __init__(self, text, text_type, url=None):
@@ -18,3 +20,40 @@ class TextNode:
 
     def __repr__(self):
         return f"TextNode({self.text}, {self.text_type.value}, {self.url})"
+
+def text_node_to_html_node(text_node):
+    match text_node.text_type:
+        case TextType.TEXT:
+            return LeafNode(None, text_node.text, None)
+        case TextType.BOLD:
+            return LeafNode("b", text_node.text, None)
+        case TextType.ITALIC:
+            return LeafNode("i", text_node.text, None)
+        case TextType.CODE:
+            return LeafNode("code", text_node.text, None)
+        case TextType.LINK:
+            return LeafNode("a", text_node.text, { "href": text_node.url })
+        case TextType.IMAGE:
+            return LeafNode("img", "", { "src": text_node.url, "alt": text_node.text })
+        case _:
+            raise Exception("Invalid text type")
+
+'''
+
+class LeafNode(HTMLNode):
+    def __init__(self, tag, value, props=None):
+        super().__init__(tag, value, None, props)
+
+    def to_html(self):
+       if self.value == None:
+           raise ValueError()
+       if self.tag == None:
+           return self.value
+
+       output = "<" + self.tag
+       props = self.props_to_html()
+       if len(props) > 0:
+           output += " " + props
+       output += ">" + self.value + "</" + self.tag + ">"
+       return output
+'''
