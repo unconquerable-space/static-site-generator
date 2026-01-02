@@ -38,22 +38,3 @@ def text_node_to_html_node(text_node):
         case _:
             raise Exception("Invalid text type")
 
-'''
-
-class LeafNode(HTMLNode):
-    def __init__(self, tag, value, props=None):
-        super().__init__(tag, value, None, props)
-
-    def to_html(self):
-       if self.value == None:
-           raise ValueError()
-       if self.tag == None:
-           return self.value
-
-       output = "<" + self.tag
-       props = self.props_to_html()
-       if len(props) > 0:
-           output += " " + props
-       output += ">" + self.value + "</" + self.tag + ">"
-       return output
-'''
