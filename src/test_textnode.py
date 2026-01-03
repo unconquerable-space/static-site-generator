@@ -1,6 +1,6 @@
 import unittest
 
-from textnode import TextNode, TextType, text_node_to_html_node
+from textnode import TextNode, TextType, text_node_to_html_node, split_nodes_delimiter
 
 TEST_URL = "https://boot.dev"
 
@@ -73,6 +73,169 @@ class TestTextNode(unittest.TestCase):
         html_node = text_node_to_html_node(node)
         self.assertEqual(html_node.tag, "img")
         self.assertEqual(html_node.props.get("src"), img)
+
+    def test_split_nodes_delimiter_none(self):
+        node = TextNode("Some plain text", TextType.TEXT)
+        new_nodes = split_nodes_delimiter([node], "**", TextType.BOLD)
+        self.assertEqual(len(new_nodes), 1)
+        self.assertEqual(new_nodes[0].text, "Some plain text")
+        self.assertEqual(new_nodes[0].text_type, TextType.TEXT)
+
+    def test_split_nodes_delimiter_unclosed(self):
+        self.split_nodes_check("This is text with ** that isn't bold", "**", TextType.BOLD, [
+            TextNode("This is text with ** that isn't bold", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("This is text with _ that isn't italic", "_", TextType.ITALIC, [
+            TextNode("This is text with _ that isn't italic", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("This is **bold text** followed by text with ** that isn't bold", "**", TextType.BOLD, [
+            TextNode("This is ", TextType.TEXT),
+            TextNode("bold text", TextType.BOLD),
+            TextNode(" followed by text with ** that isn't bold", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("This is _italic text_ followed by text with _ that isn't italic", "_", TextType.ITALIC, [
+            TextNode("This is ", TextType.TEXT),
+            TextNode("italic text", TextType.ITALIC),
+            TextNode(" followed by text with _ that isn't italic", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("This is **bold text** followed by **more bold text** followed by text with ** that isn't bold", "**", TextType.BOLD, [
+            TextNode("This is ", TextType.TEXT),
+            TextNode("bold text", TextType.BOLD),
+            TextNode(" followed by ", TextType.TEXT),
+            TextNode("more bold text", TextType.BOLD),
+            TextNode(" followed by text with ** that isn't bold", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("This is _italic text_ followed by _more italic text_ followed by text with _ that isn't italic", "_", TextType.ITALIC, [
+            TextNode("This is ", TextType.TEXT),
+            TextNode("italic text", TextType.ITALIC),
+            TextNode(" followed by ", TextType.TEXT),
+            TextNode("more italic text", TextType.ITALIC),
+            TextNode(" followed by text with _ that isn't italic", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("**This is bold** this is not **this is** this ** is not", "**", TextType.BOLD, [
+            TextNode("This is bold", TextType.BOLD),
+            TextNode(" this is not ", TextType.TEXT),
+            TextNode("this is", TextType.BOLD),
+            TextNode(" this ** is not", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("_This is italic_ this is not _this is_ this _ is not", "_", TextType.ITALIC, [
+            TextNode("This is italic", TextType.ITALIC),
+            TextNode(" this is not ", TextType.TEXT),
+            TextNode("this is", TextType.ITALIC),
+            TextNode(" this _ is not", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("This is text with a `code block` word and then a ` for no reason", "`", TextType.CODE, [
+            TextNode("This is text with a ", TextType.TEXT),
+            TextNode("code block", TextType.CODE),
+            TextNode(" word and then a ` for no reason", TextType.TEXT),
+        ])
+
+
+    def test_split_nodes_delimiter_one(self):
+
+        self.split_nodes_check("This is text with a `code block` word", "`", TextType.CODE, [
+            TextNode("This is text with a ", TextType.TEXT),
+            TextNode("code block", TextType.CODE),
+            TextNode(" word", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("Some **bold** text", "**", TextType.BOLD, [
+            TextNode("Some ", TextType.TEXT),
+            TextNode("bold", TextType.BOLD),
+            TextNode(" text", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("Some _italic_ text", "_", TextType.ITALIC, [
+            TextNode("Some ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" text", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("Some text **bolded**", "**", TextType.BOLD, [
+            TextNode("Some text ", TextType.TEXT),
+            TextNode("bolded", TextType.BOLD),
+        ])
+
+        self.split_nodes_check("Some text _italicized_", "_", TextType.ITALIC, [
+            TextNode("Some text ", TextType.TEXT),
+            TextNode("italicized", TextType.ITALIC),
+        ])
+
+        self.split_nodes_check("_Italicize_ some text", "_", TextType.ITALIC, [
+            TextNode("Italicize", TextType.ITALIC),
+            TextNode(" some text", TextType.TEXT),
+        ])
+
+    def test_split_nodes_delimiter_multi(self):
+        self.split_nodes_check("This is text with a `code block` word, but also `another code block`", "`", TextType.CODE, [
+            TextNode("This is text with a ", TextType.TEXT),
+            TextNode("code block", TextType.CODE),
+            TextNode(" word, but also ", TextType.TEXT),
+            TextNode("another code block", TextType.CODE),
+        ])
+
+        self.split_nodes_check("Some **bold** text, and then more **bold** text", "**", TextType.BOLD, [
+            TextNode("Some ", TextType.TEXT),
+            TextNode("bold", TextType.BOLD),
+            TextNode(" text, and then more ", TextType.TEXT),
+            TextNode("bold", TextType.BOLD),
+            TextNode(" text", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("Some _italic_ text, and then more _italic_ text", "_", TextType.ITALIC, [
+            TextNode("Some ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" text, and then more ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" text", TextType.TEXT),
+        ])
+
+        self.split_nodes_check("**bold** not **bold** not **bold**", "**", TextType.BOLD, [
+            TextNode("bold", TextType.BOLD),
+            TextNode(" not ", TextType.TEXT),
+            TextNode("bold", TextType.BOLD),
+            TextNode(" not ", TextType.TEXT),
+            TextNode("bold", TextType.BOLD),
+        ])
+
+        self.split_nodes_check("_italic_ not _italic_ not _italic_", "_", TextType.ITALIC, [
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" not ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" not ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+        ])
+
+    def test_split_nodes_delimiter_combo(self):
+
+        s = "this is **bold text** and this is _italic text_"
+        self.split_nodes_check(s, "_", TextType.ITALIC, [
+            TextNode("this is **bold text** and this is ", TextType.TEXT),
+            TextNode("italic text", TextType.ITALIC),
+        ])
+
+        self.split_nodes_check(s, "**", TextType.BOLD, [
+            TextNode("this is ", TextType.TEXT),
+            TextNode("bold text", TextType.BOLD),
+            TextNode(" and this is _italic text_", TextType.TEXT),
+        ])
+
+    def split_nodes_check(self, text, delimiter, text_type, expected_nodes):
+        node = TextNode(text, TextType.TEXT)
+        new_nodes = split_nodes_delimiter([node], delimiter, text_type)
+        self.assertEqual(len(new_nodes), len(expected_nodes))
+        for i, n in enumerate(new_nodes):
+            self.assertEqual(new_nodes[i].text, expected_nodes[i].text)
+            self.assertEqual(new_nodes[i].text_type, expected_nodes[i].text_type)
+
 
 
 if __name__ == "__main__":
